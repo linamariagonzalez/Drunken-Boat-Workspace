@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drunken Boat Shorts</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #fff;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      overflow: hidden;
+    }
+
+    /* Logo */
+    #logo {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      opacity: 0.9;
+      /* Remove the placeholder block below once you swap in a real image */
+    }
+
+    /* Placeholder shown when no logo image is set */
+    #logo-placeholder {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #111;
+    }
+
+    /* Player bar pinned to bottom */
+    #player {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 72px;
+      background: #fff;
+      border-top: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      gap: 16px;
+    }
+
+    #play-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    #play-btn svg { display: block; }
+
+    #time-current {
+      font-size: 11px;
+      color: #999;
+      letter-spacing: 0.03em;
+      flex-shrink: 0;
+      width: 34px;
+      text-align: right;
+    }
+
+    #progress-wrap {
+      flex: 1;
+      height: 3px;
+      background: #e8e8e8;
+      border-radius: 2px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    #progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #111;
+      border-radius: 2px;
+      pointer-events: none;
+      transition: width 0.5s linear;
+    }
+
+    #time-total {
+      font-size: 11px;
+      color: #ccc;
+      letter-spacing: 0.03em;
+      flex-shrink: 0;
+      width: 34px;
+    }
+
+    /* Hidden YouTube iframe */
+    #yt {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Swap src to your real logo image path -->
+  <img id="logo" src="" alt="" onerror="this.style.display='none'; document.getElementById('logo-placeholder').style.display='block';" />
+  <div id="logo-placeholder"></div>
+
+  <!-- Player bar -->
+  <div id="player">
+    <button id="play-btn" aria-label="Play / Pause">
+      <!-- Play icon -->
+      <svg id="icon-play" width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" stroke="#111" stroke-width="1.5"/>
+        <polygon points="11,9 21,14 11,19" fill="#111"/>
+      </svg>
+      <!-- Pause icon (hidden) -->
+      <svg id="icon-pause" width="28" height="28" viewBox="0 0 28 28" fill="none" style="display:none">
+        <circle cx="14" cy="14" r="13" stroke="#111" stroke-width="1.5"/>
+        <rect x="10" y="9" width="3" height="10" fill="#111"/>
+        <rect x="15" y="9" width="3" height="10" fill="#111"/>
+      </svg>
+    </button>
+
+    <span id="time-current">0:00</span>
+
+    <div id="progress-wrap">
+      <div id="progress-fill"></div>
+    </div>
+
+    <span id="time-total">--:--</span>
+  </div>
+
+  <!-- Hidden YouTube player -->
+  <div id="yt"></div>
+
+  <script>
+    var tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+
+    var player, playing = false, ticker;
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('yt', {
+        videoId: 'mPqAiQb_Dfo',
+        playerVars: { autoplay: 0, controls: 0, playsinline: 1 },
+        events: {
+          onReady: function(e) {
+            var d = player.getDuration();
+            document.getElementById('time-total').textContent = fmt(d);
+          },
+          onStateChange: function(e) {
+            if (e.data === YT.PlayerState.PLAYING) {
+              setPlaying(true);
+            } else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) {
+              setPlaying(false);
+            }
+          }
+        }
+      });
+    }
+
+    function setPlaying(state) {
+      playing = state;
+      document.getElementById('icon-play').style.display = state ? 'none' : 'block';
+      document.getElementById('icon-pause').style.display = state ? 'block' : 'none';
+      if (state) {
+        ticker = setInterval(tick, 500);
+      } else {
+        clearInterval(ticker);
+      }
+    }
+
+    function tick() {
+      if (!player) return;
+      var cur = player.getCurrentTime();
+      var dur = player.getDuration();
+      document.getElementById('time-current').textContent = fmt(cur);
+      document.getElementById('progress-fill').style.width = (dur ? (cur / dur * 100) : 0) + '%';
+    }
+
+    function fmt(s) {
+      s = Math.floor(s || 0);
+      var m = Math.floor(s / 60), sec = s % 60;
+      return m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+
+    document.getElementById('play-btn').addEventListener('click', function() {
+      if (!player) return;
+      playing ? player.pauseVideo() : player.playVideo();
+    });
+
+    document.getElementById('progress-wrap').addEventListener('click', function(e) {
+      if (!player) return;
+      var rect = this.getBoundingClientRect();
+      var pct = (e.clientX - rect.left) / rect.width;
+      player.seekTo(player.getDuration() * pct, true);
+    });
+  </script>
+</body>
+</html>
